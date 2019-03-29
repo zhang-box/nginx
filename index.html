@@ -1,0 +1,521 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>vue.js图片批量上传插件</title>
+
+<script src="./js/vue2.2.2.js"></script>
+<link rel="stylesheet" href="css/elementui.css">
+<style>
+    html,body{
+        padding: 0;
+        margin: 0;
+    }
+    #header{
+        width: 100%;
+        height: 60px;
+        background: url('bg.jpg') center no-repeat;
+        margin-bottom: 20px;
+    }
+    #mask{
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        bottom: 0; right: 0;
+        margin: auto;
+        z-index: 9999;
+        cursor: pointer;
+    }
+
+    /*清除浮动*/
+    .clearfix::before,
+    .clearfix::after {
+      content: '';
+      display: block;
+      width: 0;
+      height: 0;
+      overflow:hidden;
+      clear: both;
+    }
+  .upload_warp_img_div_del {
+      position: absolute;
+      top: 6px;
+      width: 16px;
+      right: 4px;
+    }
+    .upload_warp_img_div_top {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 30px;
+      background-color: rgba(0, 0, 0, 0.4);
+      line-height: 30px;
+      text-align: left;
+      color: #fff;
+      font-size: 12px;
+      text-indent: 4px;
+    }
+    .upload_warp_img_div_text {
+      white-space: nowrap;
+      width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .upload_warp_img_div img {
+      width: 100%;
+      height: 100%;
+      vertical-align: middle;
+    }
+    .upload_warp_img_div {
+      position: relative;
+      height: 65px;
+      width: 80px;
+      border: 1px solid #ccc;
+      margin: 0px 10px 0px 0px;
+      float: left;
+      display: table-cell;
+      text-align: center;
+      background-color: #eee;
+      cursor: pointer;
+    }
+    .upload_warp_img {
+      border-top: 1px solid #D2D2D2;
+      padding: 14px 0 0 14px; 
+      overflow: hidden
+    }
+    .upload_warp_text {
+      text-align: left;
+      margin-bottom: 10px;
+      padding-top: 10px;
+      text-indent: 14px;
+      border-top: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .upload_warp_right {
+      float: left;
+      width: 57%;
+      margin-left: 2%;
+      height: 100%;
+      border: 1px dashed #999;
+      border-radius: 4px;
+      line-height: 130px;
+      color: #999;
+    }
+    .upload_warp_left img {
+      margin-top: 13px;
+      width: 55%;
+    }
+    .upload_warp_left {
+      width: 80px;
+      height: 65px;
+      border: 1px dashed #999;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-block;
+      text-align: center;
+    }
+    .upload {
+      border: 1px solid #ccc;
+      background-color: #fff;
+      box-shadow: 0px 1px 0px #ccc;
+      border-radius: 4px;
+      padding: 5px 5px;
+      margin: 10px auto;
+      display: inline-block;
+    }
+    .hello {
+      width: 650px;
+      height: 500px;
+      margin:0 auto;
+    }
+    /*轮播*/
+    /*.el-carousel__item h3 {
+      color: #475669;
+      font-size: 18px;
+      opacity: 0.75;
+      line-height: 300px;
+      margin: 0;
+    }*/
+   
+    .el-carousel__item img {
+      display:block;
+      width: 100%;
+      height: 100%;
+    }
+    .el-carousel__item:nth-child(2n) {
+      background-color: #99a9bf;
+    }
+    .el-carousel__item:nth-child(2n+1) {
+      background-color: #d3dce6;
+    }
+    .el-slider__runway{
+      width: 60%!important;
+      margin-top: -12px;
+     margin-left: 256px;
+    }
+    .active{
+    border: 2px solid red;
+    }
+   .tablelable{
+    z-index: 1000;
+    position: absolute;
+    opacity: 0.6;
+    background: rgb(114, 136, 186);
+   }
+  .table{
+    border:1px solid #EBEBEB; 
+    box-shadow: 0 0 3px 1px #FAFAFA;
+    background-color: #FCFAFA;
+    font-weight: 500;
+  }
+ tr{
+   line-height: 40px;
+  } 
+/*   .el-table td, .el-table th.is-leaf{
+  text-align: center;
+} */
+.demo-spin-icon-load{
+    animation: ani-demo-spin 1s linear infinite;
+}
+@keyframes ani-demo-spin {
+   from { transform: rotate(0deg);}
+   50% { transform: rotate(180deg);}
+   to { transform: rotate(360deg);}
+}
+/* 假如内容过长，一屏放不下，滚动条下拉覆盖不全 */
+.ivu-spin-fix {
+    position: fixed;
+}
+
+
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="header"></div>
+   <div class="headoutside" style="display: inline-block;text-align: center;width: 100%;">
+      <div class="upload clearfix">
+            <input @change="fileChange($event)" type="file" id="upload_file" multiple style="display: none">
+           <div class="upload_warp_img_div"  v-for="(item,index) of imgList" :key="index" :class="{'active':item.active}" @click="showBigPic(index,item)" id="small">
+             <img :src="item.file.src" >
+           </div>
+           <div class="upload_warp" style="display: inline-block;" title="一次最多只能上传10张">
+               <div class="upload_warp_left" @click="fileClick">
+                   <!--
+                    <div class="upload_warp_left" @click="fileClick">
+                       <img src="./upload.png">
+                   -->
+                     <i class="el-icon-plus" style="font-size: 40px;margin-top: 5px;color: #8c939d;"></i>
+                     <span style="display: block;font-size: 12px;color: #8c939d;">识图一下</span>
+                  </div> 
+           </div>
+       </div>
+     </div>
+     <div class="hello">
+    <div v-show="imgList.length > 0"  style="position: relative;" class="bigBox">
+      <!-- <div :style="{color:cl,background:bk,width:tableWight+'px',height:tableHeight+'px',top:tableTop+'px',left:tableLeft+'px'}" 
+      class="tablelable">{{tableText}}</div> -->
+      <el-carousel  :autoplay="autoplayDefault" ref="carousel" indicator-position="none" @change="nextPic">
+        <el-carousel-item v-for="(item, index) in imgList" :key="index">
+          <img :src="item.file.src" style="width: 100%;height: 100%;cursor: pointer;" @click="zoomLarge(item.file.src)">
+        </el-carousel-item>
+      </el-carousel>
+    </div> 
+
+    <div class="bottom" v-if="resultType">
+      <p>识别结果</p>
+      <!--<div>-->
+          <div class="block">
+              <span class="demonstration">置信度</span>
+              <el-slider v-model="sliderVal" @change="sliderChange"></el-slider>
+          </div>
+        <!--<div>-->
+        <table class="table table-bordered" id='tabletest' style="width: 100%;text-align: center;margin-top: 15px"  cellpadding="0" cellspacing="0" >
+         <thead>
+             <th>序号</th>
+             <th>名称</th>
+             <th>置信度</th>
+         </thead>
+          <tbody  class="tBody" v-loading="loading">
+            <tr v-for="item in imgLableList" v-if="item.score > sliderVal">
+              <td v-text="item.id"></td>
+              <td v-text="item.name"></td>
+              <td >{{item.score}}%</td>
+            </tr>
+            <tr v-if="imgLableList.length == 0">
+              <td ></td>
+              <td>未检测到图片</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table> 
+        </div>
+      </div>
+    </div>
+    <el-button :plain="true" @click="warn" id="warn" style="display: none">警告</el-button>
+    <el-button :plain="true" @click="warn2" id="warn2" style="display: none">警告</el-button>
+  </div>
+
+</div>
+<!--大图遮罩-->
+<img id="mask" src="">
+
+<script type="text/javascript" src="js/jquery-3.3.1.min.js"></script> 
+<script src="js/elementui.js"></script>
+  <script>
+
+  var app = new Vue({
+    el: '#app',
+    data () {
+      return {
+        imgList: [],
+        //imgList2:[],
+        centerDialogVisible: false,
+        resultType: false,  //识别结果不显示
+        size: 0,
+        autoplayDefault:false,
+        value1: 0,
+        tableData:[],
+        bk:'#7288BA',
+        tableHeight:'',
+        tableWight:'',
+        tableLeft:'',
+        tableTop:'',
+        tableText:'',
+        imgLableList:[],
+        loading:false,
+        sliderVal: 0,  //滑块值
+        /*showType:false*/
+      }
+     },
+
+    methods: {
+        //图片放大
+        zoomLarge(src){
+           $('#mask').attr('src', src).css('display','block');
+        },
+      fileClick(){
+        //判断当前选中图片数量
+        // if(this.imgList.length>=10){
+        //   document.getElementById("warn").click();
+        // }
+        document.getElementById('upload_file').click();
+      },
+      fileChange(el){
+        if (!el.target.files[0].size) return;  //size是字节
+        //上传之后 必须等通过FileReader 函数  来获得图片的64编码
+        this.fileList(el.target.files);
+        el.target.value = ''
+      },
+      fileList(files){
+            let index;
+          if(files.length > 10){
+              index = 10
+          }else{
+              index = files.length
+          }
+          for (let i = 0; i < index; i++) {
+              this.fileAdd(files[i]);
+          }
+      },
+      fileAdd(file){
+        this.imgList = [];
+        $(".bigBox .tablelable").remove();
+        //总大小
+        this.size = this.size + file.size;
+        //可以读取计算机文件大小的实例对象
+        let reader = new FileReader();
+        //reader.vue = this;
+        var that = this;
+        reader.readAsDataURL(file);
+        //读取完成时触发
+        reader.onload = function () {
+          file.src = this.result;
+          if(that.imgList.length==0){
+            that.imgList.push({
+                file
+              });
+
+          }else {
+            const res =that.imgList.some(function(val,index){
+              // if(val.file.name == file.name && val.file.size == file.size ){
+              //   that.$message.warning(val.file.name + '图片已识别，请重新选择');
+              //   return true;
+              // }
+            });
+            if(!res){
+              ////判断图片上传数量
+              //   document.getElementById("warn").click();
+              that.judgePicLength(file);
+            }
+          }
+        }
+      },
+      // fileDel(index){
+      //   this.size = this.size - this.imgList[index].file.size;//总大小
+      //   this.imgList.splice(index, 1);
+      // },
+      // bytesToSize(bytes){
+      //   if (bytes === 0) return '0 B';
+      //   let k = 1000, // or 1024
+      //     sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+      //     i = Math.floor(Math.log(bytes) / Math.log(k));
+      //   return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i];
+      // },
+      // dragenter(el){
+      //   el.stopPropagation();
+      //   el.preventDefault();
+      // },
+      // dragover(el){
+      //   el.stopPropagation();
+      //   el.preventDefault();
+      // },
+      // drop(el){
+      //   el.stopPropagation();
+      //   el.preventDefault();
+      //   this.fileList(el.dataTransfer.files);
+      // },
+      //点击小图显示大图
+      showBigPic(index,item){
+         this.imgLableList = [];
+         $(".bigBox .tablelable").remove();
+         this.getLable(index);
+         this.$refs['carousel'].setActiveItem(index);
+      },
+      nextPic(index){
+         this.imgLableList = [];
+          $(".bigBox .tablelable").remove();
+          $('.upload_warp_img_div').eq(index).addClass('active').siblings().removeClass('active');
+          /*document.getElementById("small").click();*/
+          // this.imgList.forEach(function (item) {
+          //       Vue.set(item,'active',false);
+
+          //     });
+          //     Vue.set(item,'active',true);
+          this.resultType = true;  //显示识别结果
+          this.getLable(index);
+      },
+      warn(){
+          this.$message({
+            message: '警告 图片最多上传10张',
+            type: 'warning'
+          });
+      },
+      warn2(){
+           this.$message({
+            message: '未检测到照片',
+            type: 'error'
+          });
+      },
+      judgePicLength(file){
+        //  let i = this.imgList.length;
+        // if(this.imgList.length>=10){
+        //     // document.getElementById("warn").click();
+        //     //图片数量超过10张以后就会覆盖
+        //     this.imgList.shift();
+        // }
+        this.imgList.push({file});
+          setTimeout(() => {
+              this.$refs['carousel'].setActiveItem(0);
+              this.nextPic(0);
+          }, 50);
+        // setTimeout(() => {
+        //     const index = this.imgList.length - i;
+        //     this.$refs['carousel'].setActiveItem(index);
+        //     this.nextPic(index);
+        // }, 50);
+
+      },
+
+      sliderChange(value){
+        this.sliderVal = value;
+        
+      },
+      getLable(index){
+          this.loading = true;
+          this.imgLableList = [];
+          $(".bigBox .tablelable").remove();
+          // this.imgList.forEach(function (item) {
+          //   Vue.set(item,'active',false);
+          // });
+          // Vue.set(item,'active',true);
+          $('.upload_warp_img_div').eq(index).addClass('active').siblings().removeClass('active');
+         let str = this.imgList[index].file.src;
+         var that = this;
+         jQuery.ajax({
+            type: 'post',
+            url: 'http://192.168.31.115:8083/api/user/detection',
+            data: {imgBase64Code: str},
+            success: function(res){
+              if(res.code == 1){
+                var MyTest = that.imgList[index].file
+                var reader = new FileReader();
+                 let childdiv = '';
+                reader.readAsDataURL(MyTest);
+                reader.onload = function(theFile) {
+                  var image = new Image();
+                  image.src = theFile.target.result;
+                   image.onload = function() {
+                     let imgWidth = this.width
+                     let imgHeight = this.height
+                      for (var i = 0; i < res.results.length; i++) {
+                       /* that.tableHeight = res.results[i].height*0.4
+                        that.tableWight = res.results[i].width*0.6
+                        that.tableText = res.results[i].name*/
+                        childdiv += '<div class="tablelable" style="width:'+res.results[i].width*0.6+'px;height:'+res.results[i].height*0.4+'px;top:'+(300*res.results[i].top)/imgHeight+'px;left:'+(650*res.results[i].left)/imgWidth+'px">'+(i+1)+':'+res.results[i].name+'</div>';
+                        var value = (res.results[i].score*100).toString().substring(0,5);
+                        var obj = {};
+                        obj.index = index;
+                        obj.id = that.imgLableList.length+1;
+                        obj.name = res.results[i].name;
+                        obj.score = value;
+                        var flag = that.imgLableList.some(function(val){
+                            if(obj.name == val.name && obj.score == val.score){
+                              return true;
+                            }
+                        })
+                        if(!flag){
+                          that.imgLableList.push(obj);
+                        }
+                        /*var tr;
+                          tr='<td>'+(i+1)+'</td>'+'<td>'+res.results[i].name+'</td>'+'<td>'+value+'%'+'</td>';
+                          $("#tabletest").append('<tr>'+tr+'</tr>');*/
+                      }
+                    $(".bigBox").append(childdiv);
+                  };
+                };
+               // $.each(res.results,function(index,item){
+               //  })
+              var len = $('table tr').length;
+                  for(var i = 1;i<len;i++){
+                      $('table tr:eq('+i+') td:first').text(i);
+                  }
+
+              }
+                that.loading = false;
+              /*
+              else{
+                 document.getElementById("warn2").click();
+              }
+              */
+            },
+            error: function(res){
+              that.$message.error('连接超时，请稍后重试');
+              that.loading = false;
+            }
+         })
+      }
+    },
+  });
+  //退出大图
+  $('#mask').on('click', function(){
+      $('#mask').css('display','none').attr('src', '');
+  })
+</script>
+<div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';">
+</div>
+</body>
+</html>
